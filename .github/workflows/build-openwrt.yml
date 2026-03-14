@@ -8,6 +8,11 @@ name: Redmi AX6S
 on:
   repository_dispatch:
   workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: false
 
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt.git
@@ -91,12 +96,19 @@ jobs:
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
+        
+    - name: 删除luci与packages
+      run: cd openwrt && sed -i '1,2d' feeds.conf.default
 
     - name: 更新 feeds
       run: cd openwrt && ./scripts/feeds update -a
       
-    - name: 删除插件与缓存
-      run: cd openwrt && rm -rf feeds/luci/applications/luci-app-appfilter && rm -rf feeds/luci.tmp/info/.packageinfo-applications_luci-app-appfilter && sed -i '3809,3848d' feeds/luci.tmp/.packageinfo && rm -rf feeds/packages/net/open-app-filter && rm -rf feeds/packages.tmp/info/.packageinfo-net_open-app-filter && sed -i '79335,79369d' feeds/packages.tmp/.packageinfo
+    - name: SSH 连接到 Actions
+      uses: P3TERX/ssh2actions@v1.0.0
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
     - name: 安装 feeds
       run: cd openwrt && ./scripts/feeds install -a
